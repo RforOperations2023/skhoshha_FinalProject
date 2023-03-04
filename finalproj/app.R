@@ -3,8 +3,14 @@ library(shinythemes)
 library(leaflet)
 library(leaflet.extras)
 library(sf)
+library(reshape2)
 library(shinyjs)
+library(plotly)
 library(dplyr)
+library(htmltools)
+library(readxl)
+library(forcats)
+
 
 # Load datasets
 data = read_excel('public_housing.xlsx')
@@ -61,8 +67,8 @@ ui <- navbarPage("Pittsburgh Public Housing & Demographics",
                  ),
                  # Plots Panel
                  tabPanel("Plots",
-                          # sidebarLayout(
-                          #   sidebarPanel(
+                           sidebarLayout(
+                             sidebarPanel(
                               # Inputs: select population range ---------------------------------------
                               sliderInput("Pop", "Population (2010)",
                                           min = min(demdata$Pop_2010), max = max(demdata$Pop_2010),
@@ -81,20 +87,23 @@ ui <- navbarPage("Pittsburgh Public Housing & Demographics",
                                                       "9", "10", "11", "12", "13", "14", "15", "16"),
                                           multiple = TRUE,
                                           selectize = TRUE,
-                                          selected = '')#)),
-                          # mainPanel(
-                          # fluidRow(
-                          #   tabBox(title = "Plot",
-                          #          width = 12,
-                          #          tabPanel("land", plotlyOutput("plot_land")),
-                          #          tabPanel("race", plotlyOutput("plot_race")),
-                          #          tabPanel("age", plotlyOutput("plot_age")))
-                          # )
+                                          selected = '')),
+                          mainPanel(
+                          fluidPage(
+                                  tabPanel("land", plotlyOutput("plot_land")),
+                                  br(), br(),
+                                   tabPanel("race", plotlyOutput("plot_race")),
+                                  br(), br(),
+                                   tabPanel("age", plotlyOutput("plot_age"))),
+                          br(), br()
+                          ))
                           ),
                  # Data Table Panel
                  tabPanel("Data",
                           fluidPage(
-                            wellPanel(DT::dataTableOutput("table"))
+                            wellPanel(DT::dataTableOutput("table"),
+                                      br(), br(),
+                            DT::dataTableOutput("table2"))
                           )
                  )
 )
@@ -105,7 +114,7 @@ server <- function(input, output) {
   # Color Palette for Map
   pal <- colorBin(
     palette = "RdYlBu",
-    domain = data2$INSPECTION_SCORE, 4, pretty = FALSE)
+    domain = data$INSPECTION_SCORE, 4, pretty = FALSE)
   
   # Basic Map of the public housing buildings in Pittsburgh
   output$leaflet <- renderLeaflet({
@@ -123,9 +132,14 @@ server <- function(input, output) {
   # Green Infrastructure Filtered data
   mapInputs <- reactive({
 
-    req(input$score)
+    #req(input$score)
     # Scores
-    data <- subset(data, INSPECTION_SCORE == input$score)
+    data <- data %>%
+      
+      # Slider Filter ----------------------------------------------
+    filter(
+      INSPECTION_SCORE >= input$score[1] &
+      INSPECTION_SCORE <= input$score[2])
     
     return(data)
   })
@@ -139,10 +153,61 @@ server <- function(input, output) {
       # clearMarkers() %>%
       clearGroup(group = "data") #%>%
       # addAwesomeMarkers(icon = ~icons[sewer_type], popup = ~paste0("<b>", 
-      #                   project_na, "</b>: ", sewer_type), 
-      #                   group = "greenInf", layerId = ~asset_id)
+      #                  project_na, "</b>: ", sewer_type), 
+      #                  group = "greenInf", layerId = ~asset_id)
   })
   
+  # Reactive data function -------------------------------------------
+  data_subset <- reactive({
+    demdata <- demdata %>%
+      
+      # Slider Filter ----------------------------------------------
+    filter(
+      Pop_2010 >= input$Pop[1] &
+        Pop_2010 <= input$Pop[2],
+      Area >= input$area[1] &
+        Area <= input$area[2])
+    
+    # Sector Filter ----------------------------------------------
+    if (length(input$Sect) > 0 ) {
+      demdata <- subset(demdata, Sector %in% input$Sect)
+    }
+    
+    # Return dataframe ----------------------------------------------
+    return(demdata)
+  })
+  
+  # A plot showing land size and population size -----------------------------
+  output$plot_land <- renderPlotly({
+    dat <- subset(data_subset() )
+    ggplot(data = dat, aes(x = Area, y = Pop_2010, color = Neighborhood)) +
+      labs(y= "Population Size (2010)", x = "Land Area (acres)",
+           title = "Are Land Size and Population Size Correlated?") +
+      geom_point()
+  })
+  
+  # A plot showing the percent of White vs African American residents ----------
+  output$plot_race <- renderPlotly({
+    dat <- subset(data_subset() )
+    ggplot(data = dat, aes(x = Perc_White, y = Perc_African_American, 
+                           color = Neighborhood)) +
+      labs(y= "Percent of African American Residents", 
+           x = "Percent of White Residents",
+           title = 
+             "What is the Racial Distribution of Black and White Residents in Each Neighborhood?") +
+      geom_point()
+  })
+  
+  # A plot showing the Age Distribution -----------------------------------
+  output$plot_age <- renderPlotly({
+    dat <- subset(data_subset() )
+    ggplot(data = dat, aes(x = fct_reorder(Neighborhood, Perc_Pop_Age_20.34), 
+                           y = Perc_Pop_Age_20.34, fill = Neighborhood)) +
+      labs(y= "Percent of Residents Age 20-34", x = "Neighborhood", title = 
+             "How Young is the Population in Each Neighborhood?") +
+      theme(axis.text.x = element_text(angle=50)) +
+      geom_bar(stat = "identity")
+  })
   # # Borough Filter
   # boroInputs <- reactive({
   #   boros <- subset(boros.load, boro_name == input$boroSelect)
@@ -161,6 +226,14 @@ server <- function(input, output) {
   #     setView(lng = boros$longitude, lat = boros$latitude, zoom = 9)
   # })
   output$table <- DT::renderDataTable(mapInputs(), options = list(scrollX = T))
+  output$table2 <- DT::renderDataTable({
+    subset(data_subset(), select = c(Neighborhood, Sector, Pop_2010, 
+                                     Perc_Pop_Change_80.90,
+                                     Perc_Pop_Change_90.00, Perc_Pop_Change_00.10,
+                                     Area, Perc_African_American, Perc_White, 
+                                     Perc_Pop_Age_20.34, Perc_Pop_Age.60.74))
+  })
+  
   # Enable button once a marker has been selected
   # observeEvent(input$leaflet_marker_click$id, {
   #   enable("delete")
