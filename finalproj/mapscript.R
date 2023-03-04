@@ -14,8 +14,12 @@ pal <- colorBin(
   palette = "RdYlBu",
   domain = data2$INSPECTION_SCORE, 4, pretty = FALSE)
 
+outline <- data2[chull(data2$LONGITUDE, data2$LATITUDE),]
+
 leaflet(data2) %>%
   addProviderTiles(providers$CartoDB) %>%
+  addPolygons(data = outline, lng = ~LONGITUDE, lat = ~LATITUDE,
+              fill = F, weight = 2, color = "pink", group = "Outline") %>%
   addCircleMarkers(lng = ~LONGITUDE, lat = ~LATITUDE, radius = 1.5, 
                    color = ~pal(INSPECTION_SCORE), 
                    label = ~htmlEscape(paste('Inspection Score:',data2$INSPECTION_SCORE)),

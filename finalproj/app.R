@@ -28,10 +28,15 @@ data$LATITUDE = as.numeric(data$LATITUDE)
 
 # Define UI for application
 ui <- navbarPage("Pittsburgh Public Housing & Demographics",
-                 theme = shinytheme("united"),
-                 tabPanel("Map",
+                 theme = shinytheme("flatly"),
+                 tabPanel("Public Housing Map",
                           sidebarLayout(
                             sidebarPanel(
+                              h1("Pittsburgh Public Housing Units"),
+                              h5("This map shows where public housing units are located across Pittsburgh.
+                                 It also displays the HUD inspection score given to each building."),
+                              br(),
+                              h6("Use the slider to select fro different inspection scores:"),
                               # Select Inspection Score Range
                               sliderInput(inputId = "score", 
                                           label = "Inspection Score Range:",
@@ -66,7 +71,7 @@ ui <- navbarPage("Pittsburgh Public Housing & Demographics",
                           )
                  ),
                  # Plots Panel
-                 tabPanel("Plots",
+                 tabPanel("Demographic Plots",
                            sidebarLayout(
                              sidebarPanel(
                               # Inputs: select population range ---------------------------------------
@@ -116,10 +121,15 @@ server <- function(input, output) {
     palette = "RdYlBu",
     domain = data$INSPECTION_SCORE, 4, pretty = FALSE)
   
+  #adding an outline layer
+  outline <- data[chull(data$LONGITUDE, data$LATITUDE),]
+  
   # Basic Map of the public housing buildings in Pittsburgh
   output$leaflet <- renderLeaflet({
     leaflet(data) %>%
       addProviderTiles(providers$CartoDB) %>%
+      addPolygons(data = outline, lng = ~LONGITUDE, lat = ~LATITUDE,
+                  fill = F, weight = 2, color = "pink", group = "Outline") %>%
       addCircleMarkers(lng = ~LONGITUDE, lat = ~LATITUDE, radius = 1.5, 
                        color = ~pal(INSPECTION_SCORE), 
                        label = ~htmlEscape(paste('Inspection Score:',data$INSPECTION_SCORE)),
@@ -150,11 +160,11 @@ server <- function(input, output) {
     # Data is data
     leafletProxy("leaflet", data = data) %>%
       # In this case either lines 92 or 93 will work
-      # clearMarkers() %>%
-      clearGroup(group = "data") #%>%
-      # addAwesomeMarkers(icon = ~icons[sewer_type], popup = ~paste0("<b>", 
-      #                  project_na, "</b>: ", sewer_type), 
-      #                  group = "greenInf", layerId = ~asset_id)
+      clearMarkers() %>%
+      addCircleMarkers(lng = ~LONGITUDE, lat = ~LATITUDE, radius = 1.5, 
+                       color = ~pal(INSPECTION_SCORE), 
+                       label = ~htmlEscape(paste('Inspection Score:',data$INSPECTION_SCORE)),
+                       clusterOptions = markerClusterOptions())
   })
   
   # Reactive data function -------------------------------------------
