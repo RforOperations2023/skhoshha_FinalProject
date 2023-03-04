@@ -22,8 +22,7 @@ leaflet(data2) %>%
               fill = F, weight = 2, color = "pink", group = "Outline") %>%
   addCircleMarkers(lng = ~LONGITUDE, lat = ~LATITUDE, radius = 1.5, 
                    color = ~pal(INSPECTION_SCORE), 
-                   label = ~htmlEscape(paste('Inspection Score:',data2$INSPECTION_SCORE)),
-                   clusterOptions = markerClusterOptions()) %>%
+                   label = ~htmlEscape(paste('Inspection Score:',data2$INSPECTION_SCORE)))
   addLegend(position = "topright" , pal = pal,
             values = data2$INSPECTION_SCORE, title = "Inspection Score")
 

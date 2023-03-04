@@ -124,8 +124,7 @@ server <- function(input, output) {
                   fill = F, weight = 2, color = "pink", group = "Outline") %>%
       addCircleMarkers(lng = ~LONGITUDE, lat = ~LATITUDE, radius = 1.5, 
                        color = ~pal(INSPECTION_SCORE), 
-                       label = ~htmlEscape(paste('Inspection Score:',data$INSPECTION_SCORE)),
-                       clusterOptions = markerClusterOptions()) %>%
+                       label = ~htmlEscape(paste('Inspection Score:',data$INSPECTION_SCORE)))%>% 
       addLegend(position = "topright" , pal = pal,
                 values = data$INSPECTION_SCORE, title = "Inspection Score")
     
@@ -155,8 +154,7 @@ server <- function(input, output) {
       clearMarkers() %>%
       addCircleMarkers(lng = ~LONGITUDE, lat = ~LATITUDE, radius = 1.5, 
                        color = ~pal(INSPECTION_SCORE), 
-                       label = ~htmlEscape(paste('Inspection Score:',data$INSPECTION_SCORE)),
-                       clusterOptions = markerClusterOptions())
+                       label = ~htmlEscape(paste('Inspection Score:',data$INSPECTION_SCORE)))
   })
   
   # Reactive data function -------------------------------------------
