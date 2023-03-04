@@ -32,7 +32,7 @@ ui <- navbarPage("Pittsburgh Public Housing & Demographics",
                  tabPanel("Public Housing Map",
                           sidebarLayout(
                             sidebarPanel(
-                              
+                              # Headers
                               h3("Allegheny County & Pittsburgh Public Housing Units"),
                               h5("This map shows where public housing units are located across Allegheny
                               County, including Pittsburgh.
@@ -210,8 +210,11 @@ server <- function(input, output) {
       theme(axis.text.x = element_text(angle=50)) +
       geom_bar(stat = "identity")
   })
-
+  
+  # Table for the public housing data
   output$table <- DT::renderDataTable(mapInputs(), options = list(scrollX = T))
+  
+  # Table for the demographics data
   output$table2 <- DT::renderDataTable({
     subset(data_subset(), select = c(Neighborhood, Sector, Pop_2010, 
                                      Perc_Pop_Change_80.90,
@@ -219,7 +222,7 @@ server <- function(input, output) {
                                      Area, Perc_African_American, Perc_White, 
                                      Perc_Pop_Age_20.34, Perc_Pop_Age.60.74))
   })
-  
+  # Download data button
   output$downloadData <- downloadHandler(
     filename = function() {
       paste('data-', Sys.Date(), '.csv', sep='')
