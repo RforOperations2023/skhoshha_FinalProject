@@ -13,7 +13,11 @@ library(forcats)
 
 
 # Load datasets
+
+# data on public housing units
 data = read_excel('public_housing.xlsx')
+
+# data on Pittsburgh demographics
 demdata = read.csv('housing.csv')
 
 # Clean neighborhood column name in demographic data
