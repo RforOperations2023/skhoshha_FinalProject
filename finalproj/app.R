@@ -32,8 +32,10 @@ ui <- navbarPage("Pittsburgh Public Housing & Demographics",
                  tabPanel("Public Housing Map",
                           sidebarLayout(
                             sidebarPanel(
-                              h1("Pittsburgh Public Housing Units"),
-                              h5("This map shows where public housing units are located across Pittsburgh.
+                              
+                              h3("Allegheny County & Pittsburgh Public Housing Units"),
+                              h5("This map shows where public housing units are located across Allegheny
+                              County, including Pittsburgh.
                                  It also displays the HUD inspection score given to each building."),
                               br(),
                               h6("Use the slider to select fro different inspection scores:"),
@@ -43,22 +45,11 @@ ui <- navbarPage("Pittsburgh Public Housing & Demographics",
                                           min = min(data$INSPECTION_SCORE), 
                                           max = max(data$INSPECTION_SCORE),
                                           value = range(data$INSPECTION_SCORE)
-                              )),
-                            #   # Select NYC Borough
-                            #   radioButtons(inputId = "boroSelect",
-                            #                label = "Borough Filter:",
-                            #                choices = unique(sort(greenInf.load$borough)),
-                            #                selected = "Bronx"),
-                            #   # Number of projects
-                            #   textOutput("text"),
-                            #   tags$br(),
-                            #   # Remove a Project
-                            #   disabled(actionButton("delete", "Remove Project", icon = icon("xmark"))),
-                            #   # Select a Project
-                            #   tags$br(), tags$br(),
-                            #   # Restore projects
-                            #   disabled(actionButton("restore", "Restore removed Projects", icon = icon("arrows-rotate")))
-                            # ),
+                              ),
+                              # Add Download Button
+                              downloadButton(outputId = "downloadData", label = "Download", class = NULL)
+                              ),
+
                             mainPanel(
                               # Using Shiny JS
                               shinyjs::useShinyjs(),
@@ -66,7 +57,8 @@ ui <- navbarPage("Pittsburgh Public Housing & Demographics",
                               tags$style(type = "text/css", ".leaflet {height: calc(100vh - 90px) !important;}
                                          body {background-color: #D4EFDF;}"),
                               # Map Output
-                              leafletOutput("leaflet")
+                              leafletOutput("leaflet"),
+                              br(), br()
                             )
                           )
                  ),
@@ -218,23 +210,7 @@ server <- function(input, output) {
       theme(axis.text.x = element_text(angle=50)) +
       geom_bar(stat = "identity")
   })
-  # # Borough Filter
-  # boroInputs <- reactive({
-  #   boros <- subset(boros.load, boro_name == input$boroSelect)
-  #   
-  #   return(boros)
-  # })
-  # 
-  # observe({
-  #   boros <- boroInputs()
-  #   
-  #   leafletProxy("leaflet", data = boros) %>%
-  #     # In this case either lines 107 or 108 will work
-  #     # clearShapes() %>%
-  #     clearGroup(group = "boros") %>%
-  #     addPolygons(popup = ~paste0("<b>", boro_name, "</b>"), group = "boros", layerId = ~boro_code, fill = FALSE, color = "green") %>%
-  #     setView(lng = boros$longitude, lat = boros$latitude, zoom = 9)
-  # })
+
   output$table <- DT::renderDataTable(mapInputs(), options = list(scrollX = T))
   output$table2 <- DT::renderDataTable({
     subset(data_subset(), select = c(Neighborhood, Sector, Pop_2010, 
@@ -244,35 +220,15 @@ server <- function(input, output) {
                                      Perc_Pop_Age_20.34, Perc_Pop_Age.60.74))
   })
   
-  # Enable button once a marker has been selected
-  # observeEvent(input$leaflet_marker_click$id, {
-  #   enable("delete")
-  # })
-  # # Add layerID to list of removed projects
-  # observeEvent(input$delete, {
-  #   enable("restore")
-  #   isolate({
-  #     values$removed <- c(values$removed, input$leaflet_marker_click$id)
-  #   })
-  # })
-  # # Reset removed Projects
-  # observeEvent(input$restore, {
-  #   values$removed <- c()
-  #   disable("restore")
-  # })
-  # # Subset to data Only on screen
-  # onScreen <- reactive({
-  #   req(input$leaflet_bounds)
-  #   bounds <- input$leaflet_bounds
-  #   latRng <- range(bounds$north, bounds$south)
-  #   lngRng <- range(bounds$east, bounds$west)
-  #   
-  #   subset(greenInfInputs(), latitude >= latRng[1] & latitude <= latRng[2] & longitude >= lngRng[1] & longitude <= lngRng[2])
-  # })
-  # # Print Projects
-  # output$text <- renderText({
-  #   paste("You are viewing", nrow(onScreen()), "projects")
-  # })
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste('data-', Sys.Date(), '.csv', sep='')
+    },
+    content = function(con) {
+      write.csv(data, con)
+    }
+  )
+  
 }
 
 # Run the application 
